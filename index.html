@@ -179,14 +179,12 @@
           printWindow.print();
         });
 
-        // Simpan ke localStorage
         document.getElementById('saveLocalBtn').addEventListener('click', () => {
           if (items.length === 0) return alert('Tidak ada data untuk disimpan.');
           localStorage.setItem('notaItems', JSON.stringify(items));
           alert('Data berhasil disimpan.');
         });
 
-        // Muat data saat halaman dimuat
         window.addEventListener('DOMContentLoaded', () => {
           const saved = localStorage.getItem('notaItems');
           if (saved) {
