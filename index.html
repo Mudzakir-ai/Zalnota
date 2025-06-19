@@ -82,6 +82,9 @@
       <button id="whatsappBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2">
         <i class="fab fa-whatsapp"></i> WhatsApp
       </button>
+      <button id="viewSavedBtn" type="button" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2 mt-2">
+        <i class="fas fa-eye"></i> Lihat Simpanan
+      </button>
     </div>
 
     <script>
@@ -224,6 +227,15 @@
           const encodedMessage = encodeURIComponent(message);
           window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
         });
+
+        document.getElementById('viewSavedBtn').addEventListener('click', () => {
+          const data = localStorage.getItem('notaItems');
+          if (data) {
+            alert('Data Tersimpan:\n' + JSON.stringify(JSON.parse(data), null, 2));
+          } else {
+            alert('Tidak ada data yang tersimpan.');
+          }
+        }); 
       })();
     </script>
   </main>
