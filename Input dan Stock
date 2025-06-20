@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Input Barang & Stok - ZALTA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    @media print {
+      body *:not(#printArea):not(#printArea *) {
+        display: none !important;
+      }
+      #printArea {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-r from-indigo-500 to-purple-700 p-4">
+  <main class="bg-white rounded-xl w-full max-w-md p-6 shadow-lg">
+
+    <header class="text-center mb-6">
+      <img src="images.png" height="100" width="100" alt="ZALTA Logo" class="mx-auto">
+      <h1 class="text-white text-2xl font-extrabold mb-1 bg-gradient-to-r from-indigo-500 to-purple-700 inline-block px-2 rounded">ZALTA</h1>
+      <p class="text-white text-sm font-normal">Input Barang & Stok</p>
+    </header>
+
+    <div class="flex justify-between items-center mb-4">
+      <div id="infoStok" class="text-sm font-semibold text-gray-800"></div>
+      <button onclick="cetakStok()" class="bg-indigo-500 text-white text-sm px-3 py-1 rounded hover:bg-indigo-600">
+        <i class="fas fa-print"></i> Cetak
+      </button>
+    </div>
+
+    <!-- Form input -->
+    <form id="barangForm" class="space-y-4 mb-6" onsubmit="return false;">
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Nama Barang (scan QR atau manual)</label>
+        <input type="text" id="namaBarang" class="w-full border px-3 py-2 rounded text-gray-600" placeholder="Scan atau ketik nama barang" required />
+      </div>
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Jumlah Stok</label>
+        <input type="number" id="jumlahStok" class="w-full border px-3 py-2 rounded text-gray-600" placeholder="Contoh: 20" required />
+      </div>
+      <div>
+        <label class="block text-gray-700 font-semibold mb-1">Harga Satuan (Rp)</label>
+        <input type="number" id="hargaBarang" class="w-full border px-3 py-2 rounded text-gray-600" placeholder="Contoh: 15000" required />
+      </div>
+      <button type="submit" class="bg-gradient-to-r from-indigo-500 to-purple-700 hover:brightness-110 text-white px-4 py-2 rounded w-full flex items-center justify-center gap-2">
+        <i class="fas fa-plus"></i> Tambah / Update Barang
+      </button>
+    </form>
+
+    <!-- Scanner QR Code -->
+    <div class="mb-6">
+      <h2 class="font-semibold mb-2 text-sm text-gray-800"><i class="fas fa-qrcode"></i> Scan QR Kode Barang</h2>
+      <div id="reader" class="w-full border rounded mb-2"></div>
+      <button onclick="mulaiScan()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm">
+        Scan Ulang
+      </button>
+    </div>
+
+    <!-- Pencarian -->
+    <div class="mb-4">
+      <input type="text" id="searchInput" placeholder="Cari nama barang..." class="w-full border px-3 py-2 rounded text-gray-600" oninput="renderBarang()" />
+    </div>
+
+    <!-- Tabel stok -->
+    <div>
+      <h2 class="font-semibold text-sm mb-2 text-gray-800"><i class="fas fa-boxes"></i> Daftar Barang</h2>
+      <div id="printArea">
+        <table class="w-full text-sm border">
+          <thead>
+            <tr class="bg-gradient-to-r from-indigo-500 to-purple-700 text-white">
+              <th class="p-2 text-left">#</th>
+              <th class="p-2 text-left">Kode</th>
+              <th class="p-2 text-left">Nama</th>
+              <th class="p-2 text-left">Stok</th>
+              <th class="p-2 text-left">Harga</th>
+              <th class="p-2 text-left">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="stokBody" class="bg-white text-gray-700"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Script -->
+  <script>
+    const barangForm = document.getElementById("barangForm");
+    const namaInput = document.getElementById("namaBarang");
+    const jumlahInput = document.getElementById("jumlahStok");
+    const hargaInput = document.getElementById("hargaBarang");
+    const stokBody = document.getElementById("stokBody");
+    const searchInput = document.getElementById("searchInput");
+    const infoStok = document.getElementById("infoStok");
+
+    let barangList = JSON.parse(localStorage.getItem("zalta_barang") || "[]");
+    let lastKode = parseInt(localStorage.getItem("zalta_last_kode") || 0);
+
+    function generateKodeBarang() {
+      lastKode++;
+      localStorage.setItem("zalta_last_kode", lastKode);
+      return `ZLT-${String(lastKode).padStart(4, '0')}`;
+    }
+
+    function simpanBarang() {
+      localStorage.setItem("zalta_barang", JSON.stringify(barangList));
+    }
+
+    function playSound() {
+      const audio = new Audio("https://notificationsounds.com/storage/sounds/file-sounds-1152-pristine.mp3");
+      audio.play();
+    }
+
+    function updateInfoStok() {
+      const total = barangList.reduce((sum, item) => sum + item.stok, 0);
+      const kosong = barangList.filter(item => item.stok === 0);
+      let msg = `Total Stok: ${total} barang.`;
+      if (kosong.length > 0) {
+        msg += ` ⚠️ ${kosong.length} barang stoknya habis!`;
+        alert(`${kosong.length} barang stoknya habis!`);
+        playSound();
+      }
+      infoStok.innerText = msg;
+    }
+
+    function renderBarang() {
+      const keyword = searchInput.value.toLowerCase();
+      stokBody.innerHTML = "";
+      barangList.forEach((item, index) => {
+        if (item.nama.toLowerCase().includes(keyword) || item.kode?.toLowerCase().includes(keyword)) {
+          const rowClass = item.stok === 0 ? 'bg-red-100' : '';
+          stokBody.innerHTML += `
+            <tr class="border-t ${rowClass}">
+              <td class="p-2">${index + 1}</td>
+              <td class="p-2">${item.kode || '-'}</td>
+              <td class="p-2">${item.nama}</td>
+              <td class="p-2"><input type="number" value="${item.stok}" onchange="updateStok(${index}, this.value)" class="w-16 border px-1 rounded" /></td>
+              <td class="p-2"><input type="number" value="${item.harga}" onchange="updateHarga(${index}, this.value)" class="w-24 border px-1 rounded" /></td>
+              <td class="p-2"><button onclick="hapusBarang(${index})" class="text-red-500 hover:underline">Hapus</button></td>
+            </tr>`;
+        }
+      });
+      updateInfoStok();
+    }
+
+    function updateStok(index, value) {
+      const stok = parseInt(value);
+      if (!isNaN(stok) && stok >= 0) {
+        barangList[index].stok = stok;
+        simpanBarang();
+        renderBarang();
+      }
+    }
+
+    function updateHarga(index, value) {
+      const harga = parseInt(value);
+      if (!isNaN(harga) && harga >= 0) {
+        barangList[index].harga = harga;
+        simpanBarang();
+      }
+    }
+
+    function hapusBarang(i) {
+      if (confirm("Hapus barang ini?")) {
+        barangList.splice(i, 1);
+        simpanBarang();
+        renderBarang();
+      }
+    }
+
+    barangForm.addEventListener("submit", () => {
+      const nama = namaInput.value.trim();
+      const stok = parseInt(jumlahInput.value);
+      const harga = parseInt(hargaInput.value);
+      if (!nama || isNaN(stok) || stok <= 0 || isNaN(harga) || harga < 0) {
+        return alert("Isi semua data dengan benar.");
+      }
+      const existing = barangList.find(b => b.nama.toLowerCase() === nama.toLowerCase());
+      if (existing) {
+        existing.stok += stok;
+        existing.harga = harga;
+      } else {
+        const kode = generateKodeBarang();
+        barangList.push({ kode, nama, stok, harga });
+      }
+      simpanBarang();
+      renderBarang();
+      barangForm.reset();
+      namaInput.focus();
+    });
+
+    function mulaiScan() {
+      const html5QrCode = new Html5Qrcode("reader");
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices.length) {
+          html5QrCode.start(
+            devices[0].id,
+            { fps: 10, qrbox: 200 },
+            qrCodeMessage => {
+              namaInput.value = qrCodeMessage;
+              namaInput.focus();
+              html5QrCode.stop();
+            }
+          );
+        }
+      }).catch(() => {
+        document.getElementById("reader").innerHTML = "Kamera tidak tersedia.";
+      });
+    }
+
+    function cetakStok() {
+  const content = document.getElementById("printArea").innerHTML;
+  const printWindow = window.open("", "", "width=800,height=600");
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>Cetak Stok Barang</title>
+      <style>
+        body { font-family: 'Inter', sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background: #6366f1; color: white; }
+      </style>
+    </head>
+    <body>
+      <h2>Daftar Stok Barang</h2>
+      ${content}
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+}
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderBarang();
+      mulaiScan();
+    });
+  </script>
+</body>
+</html>
