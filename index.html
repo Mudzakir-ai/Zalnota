@@ -286,7 +286,65 @@
           window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
         });
       })();
-    </script>
+    
+// ===== Tambahan fitur Autocomplete dan Kurangi Stok =====
+let stokList = JSON.parse(localStorage.getItem("zalta_barang") || "[]");
+const namaInputField = document.getElementById("nama-barang");
+
+namaInputField.addEventListener("input", function () {
+  const keyword = this.value.toLowerCase();
+  const suggestions = stokList.filter(item => item.nama.toLowerCase().includes(keyword));
+  closeAllSuggestions();
+  if (!keyword || suggestions.length === 0) return;
+
+  const list = document.createElement("div");
+  list.setAttribute("id", this.id + "-autocomplete-list");
+  list.setAttribute("class", "autocomplete-items bg-white border border-gray-300 absolute z-50 w-full mt-1 rounded shadow");
+  this.parentNode.appendChild(list);
+
+  suggestions.slice(0, 5).forEach(item => {
+    const div = document.createElement("div");
+    div.className = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+    div.innerHTML = "<strong>" + item.nama + "</strong><br><small>Stok: " + item.stok + ", Harga: Rp " + item.harga.toLocaleString("id-ID") + "</small>";
+    div.addEventListener("click", () => {
+      namaInput.value = item.nama;
+      nominalInput.value = item.harga;
+      closeAllSuggestions();
+    });
+    list.appendChild(div);
+  });
+});
+
+function closeAllSuggestions() {
+  const items = document.querySelectorAll(".autocomplete-items");
+  items.forEach(i => i.remove());
+}
+
+document.addEventListener("click", function (e) {
+  closeAllSuggestions();
+});
+
+// Cek stok & kurangi stok saat submit
+form.addEventListener("submit", () => {
+  const nama = namaInput.value.trim();
+  const nominal = parseFloat(nominalInput.value);
+  if (!nama) return alert('Nama barang harus diisi.');
+  if (isNaN(nominal) || nominal < 0) return alert('Nominal harus angka positif.');
+
+  const stokItem = stokList.find(b => b.nama.toLowerCase() === nama.toLowerCase());
+  if (stokItem) {
+    if (stokItem.stok <= 0) {
+      return alert('Stok barang habis!');
+    }
+    stokItem.stok -= 1;
+    localStorage.setItem("zalta_barang", JSON.stringify(stokList));
+  }
+
+  items.push({ nama, nominal });
+  updateTable();
+  resetForm();
+});
+</script>
   
 <div class="mt-4">
   <a href="stok.html" class="block text-center text-indigo-700 font-semibold hover:underline">
