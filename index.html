@@ -28,9 +28,329 @@
       <p>Email : -</p>
     </section>
 
-    <!-- Skipped for brevity: the full HTML content would go here exactly as user posted -->
+    <form id="notaForm" class="space-y-4 mb-6" onsubmit="return false;">
+      <div>
+        <label for="nama-barang" class="block text-gray-700 font-semibold mb-1 flex items-center gap-2">
+          <i class="fas fa-box"></i> Nama Barang:
+        </label>
+        <input type="text" id="nama-barang" autocomplete="off" placeholder="Masukkan nama barang..." class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-600" />
+      </div>
+      <div>
+        <label for="nominal" class="block text-gray-700 font-semibold mb-1 flex items-center gap-2">
+          <i class="fas fa-money-bill-wave"></i> Nominal (Rp):
+        </label>
+        <input type="number" id="nominal" min="0" step="any" autocomplete="off" placeholder="Masukkan harga..." class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-600" />
+      </div>
+      <button id="addBtn" type="submit" class="w-full bg-gradient-to-r from-indigo-500 to-purple-700 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2 hover:brightness-110 transition">
+        <i class="fas fa-plus"></i> Tambah ke Nota
+      </button>
+    </form>
 
-    <!-- Just simulating the end for file creation -->
-  </main>
+    <table class="w-full text-white text-sm mb-4 rounded-md overflow-hidden" id="notaTable">
+      <thead>
+        <tr>
+          <th class="bg-gradient-to-r from-indigo-500 to-purple-700 px-3 py-2 text-left font-semibold rounded-l-md">No</th>
+          <th class="bg-gradient-to-r from-indigo-500 to-purple-700 px-3 py-2 text-left font-semibold">Nama Barang</th>
+          <th class="bg-gradient-to-r from-indigo-500 to-purple-700 px-3 py-2 text-left font-semibold">Nominal (Rp)</th>
+          <th class="bg-gradient-to-r from-indigo-500 to-purple-700 px-3 py-2 text-left font-semibold rounded-r-md">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white text-gray-900" id="notaBody"></tbody>
+    </table>
+
+    <div id="totalDisplay" class="bg-green-500 text-white font-semibold rounded-md py-2 px-4 mb-6 flex items-center justify-center gap-2">
+      <i class="fas fa-receipt"></i> Total: Rp 0
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 mb-3">
+      <button id="saveLocalBtn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2">
+        <i class="fas fa-save"></i> Simpan
+      </button>
+      <button id="resetBtn" type="button" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 rounded-md flex items-center justify-center gap-2">
+        <i class="fas fa-sync-alt"></i> Reset
+      </button>
+      <button id="printBtn" type="button" class="bg-purple-700 hover:bg-purple-800 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2">
+        <i class="fas fa-print"></i> Cetak
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <button id="exportExcelBtn" type="button" class="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2">
+        <i class="fas fa-file-excel"></i> Excel
+      </button>
+      <button id="whatsappBtn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-md flex items-center justify-center gap-2">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+      </button>
+    </div>
+
+    <script>
+      (() => {
+        const form = document.getElementById('notaForm');
+        const namaInput = document.getElementById('nama-barang');
+        const nominalInput = document.getElementById('nominal');
+        const tableBody = document.getElementById('notaBody');
+        const totalDisplay = document.getElementById('totalDisplay');
+        let items = [];
+
+        function updateTable() {
+          tableBody.innerHTML = '';
+          let total = 0;
+          items.forEach((item, index) => {
+            total += item.nominal;
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-gray-200';
+            tr.innerHTML = 
+              <td class="px-3 py-2">${index + 1}</td>
+              <td class="px-3 py-2">${item.nama}</td>
+              <td class="px-3 py-2">Rp ${item.nominal.toLocaleString('id-ID')}</td>
+              <td class="px-3 py-2">
+                <button class="text-red-600 hover:text-red-800 font-semibold" data-index="${index}">Hapus</button>
+              </td>
+            ;
+            tableBody.appendChild(tr);
+          });
+          totalDisplay.innerHTML = <i class="fas fa-receipt"></i> Total: Rp ${total.toLocaleString('id-ID')};
+        }
+
+        function resetForm() {
+          namaInput.value = '';
+          nominalInput.value = '';
+          namaInput.focus();
+        }
+
+        form.addEventListener('submit', () => {
+          const nama = namaInput.value.trim();
+          const nominal = parseFloat(nominalInput.value);
+          if (!nama) return alert('Nama barang harus diisi.');
+          if (isNaN(nominal) || nominal < 0) return alert('Nominal harus angka positif.');
+          items.push({ nama, nominal });
+          updateTable();
+          resetForm();
+        });
+
+        tableBody.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON') {
+            const index = parseInt(e.target.dataset.index);
+            if (!isNaN(index)) {
+              items.splice(index, 1);
+              updateTable();
+            }
+          }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+          if (confirm('Apakah Anda yakin ingin mereset semua data?')) {
+            items = [];
+            updateTable();
+            resetForm();
+          }
+        });
+
+        document.getElementById('printBtn').addEventListener('click', () => {
+          if (items.length === 0) return alert('Tidak ada data untuk dicetak.');
+          const total = items.reduce((a, b) => a + b.nominal, 0);
+          const printWindow = window.open('', '', 'width=800,height=600');
+          const now = new Date();
+          const tanggalCetak = now.toLocaleDateString('id-ID');
+          const jamCetak = now.toLocaleTimeString('id-ID');
+
+          printWindow.document.write(
+            <html>
+              <head>
+                <title>Nota ZALTA</title>
+                <style>
+                  @media print {
+                    @page {
+                      size: auto;
+                      margin: 0;
+                    }
+                  }
+                  body {
+                    font-family: monospace;
+                    font-size: 11px;
+                    padding: 10px;
+                    margin: 0;
+                    color: #000;
+                    width: 100%;
+                    max-width: 80mm;
+                  }
+                  .center {
+                    text-align: center;
+                  }
+                 .logo {
+                    max-width: 60px;
+                    margin: 0 auto 6px;
+                  }
+                  .line {
+                    border-top: 1px dashed #000;
+                    margin: 6px 0;
+                  }
+                  .row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 4px;
+                  }
+                  .total {
+                    font-weight: bold;
+                    font-size: 13px;
+                    margin-top: 10px;
+                  }
+                  .footer {
+                    margin-top: 10px;
+                    text-align: center;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="center">
+                  <img src="images.png" class="logo" alt="Logo ZALTA" />
+                  <div><strong>ZALTA STORE</strong></div>
+                  <div>Tarub Tawangharjo</div>
+                  <div>Telp: 0881-6575-574</div>
+                  <div>${tanggalCetak} ${jamCetak}</div>
+                </div>
+
+                <div class="line"></div>
+
+                ${items.map((item, i) => 
+                  <div class="row">
+                    <div>${i + 1}. ${item.nama}</div>
+                    <div>Rp ${item.nominal.toLocaleString('id-ID')}</div>
+                  </div>
+                ).join('')}
+
+                <div class="line"></div>
+
+                <div class="row total">
+                  <div>Total</div>
+                  <div>Rp ${total.toLocaleString('id-ID')}</div>
+                </div>
+
+                <div class="line"></div>
+
+                <div class="footer">
+                  <div>Terima kasih telah belanja</div>
+                  <div>~ ZALTA ~</div>
+                 </div>
+              </body>
+            </html>
+          );
+
+          printWindow.document.close();
+          printWindow.print();
+        });
+
+        document.getElementById('saveLocalBtn').addEventListener('click', () => {
+          if (items.length === 0) return alert('Tidak ada data untuk disimpan.');
+          localStorage.setItem('notaItems', JSON.stringify(items));
+          alert('Data berhasil disimpan.');
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+          const saved = localStorage.getItem('notaItems');
+          if (saved) {
+            try {
+              items = JSON.parse(saved);
+              updateTable();
+            } catch (e) {
+              console.error('Gagal memuat data dari localStorage:', e);
+            }
+          }
+        });
+
+        document.getElementById('exportExcelBtn').addEventListener('click', () => {
+          if (items.length === 0) return alert('Tidak ada data untuk diekspor.');
+          let csv = 'No,Nama Barang,Nominal (Rp)\n';
+          items.forEach((item, i) => {
+            csv += ${i + 1},"${item.nama}",${item.nominal}\n;
+          });
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'nota_zalta.csv';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        });
+
+        document.getElementById('whatsappBtn').addEventListener('click', () => {
+          if (items.length === 0) return alert('Tidak ada data untuk dikirim.');
+          const total = items.reduce((a, b) => a + b.nominal, 0);
+          let message = *🧾 Nota ZALTA*\nZALTA Store\nJl. Contoh No. 123\nTelp: 0812-3456-7890\n\n*Daftar Barang:*\n;
+          items.forEach((item, i) => {
+            message += ${i + 1}. ${item.nama} - Rp ${item.nominal.toLocaleString('id-ID')}\n;
+          });
+          message += \n*Total: Rp ${total.toLocaleString('id-ID')}*;
+          const encodedMessage = encodeURIComponent(message);
+          window.open(https://wa.me/?text=${encodedMessage}, '_blank');
+        });
+      })();
+    
+// ===== Tambahan fitur Autocomplete dan Kurangi Stok =====
+let stokList = JSON.parse(localStorage.getItem("zalta_barang") || "[]");
+const namaInputField = document.getElementById("nama-barang");
+
+namaInputField.addEventListener("input", function () {
+  const keyword = this.value.toLowerCase();
+  const suggestions = stokList.filter(item => item.nama.toLowerCase().includes(keyword));
+  closeAllSuggestions();
+  if (!keyword || suggestions.length === 0) return;
+
+  const list = document.createElement("div");
+  list.setAttribute("id", this.id + "-autocomplete-list");
+  list.setAttribute("class", "autocomplete-items bg-white border border-gray-300 absolute z-50 w-full mt-1 rounded shadow");
+  this.parentNode.appendChild(list);
+
+  suggestions.slice(0, 5).forEach(item => {
+    const div = document.createElement("div");
+    div.className = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+    div.innerHTML = "<strong>" + item.nama + "</strong><br><small>Stok: " + item.stok + ", Harga: Rp " + item.harga.toLocaleString("id-ID") + "</small>";
+    div.addEventListener("click", () => {
+      namaInput.value = item.nama;
+      nominalInput.value = item.harga;
+      closeAllSuggestions();
+    });
+    list.appendChild(div);
+  });
+});
+
+function closeAllSuggestions() {
+  const items = document.querySelectorAll(".autocomplete-items");
+  items.forEach(i => i.remove());
+}
+
+document.addEventListener("click", function (e) {
+  closeAllSuggestions();
+});
+
+// Cek stok & kurangi stok saat submit
+form.addEventListener("submit", () => {
+  const nama = namaInput.value.trim();
+  const nominal = parseFloat(nominalInput.value);
+  if (!nama) return alert('Nama barang harus diisi.');
+  if (isNaN(nominal) || nominal < 0) return alert('Nominal harus angka positif.');
+
+  const stokItem = stokList.find(b => b.nama.toLowerCase() === nama.toLowerCase());
+  if (stokItem) {
+    if (stokItem.stok <= 0) {
+      return alert('Stok barang habis!');
+    }
+    stokItem.stok -= 1;
+    localStorage.setItem("zalta_barang", JSON.stringify(stokList));
+  }
+
+  items.push({ nama, nominal });
+  updateTable();
+  resetForm();
+});
+</script>
+  
+<div class="mt-4">
+  <a href="stok.html" class="block text-center text-indigo-700 font-semibold hover:underline">
+    <i class="fas fa-boxes"></i> Kelola Stok Barang
+  </a>
+</div>
+</main>
 </body>
 </html>
